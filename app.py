@@ -20,12 +20,8 @@ def gemini():
 def gemini_reply():
     q = request.form.get("q")
     print(q)
-<<<<<<< HEAD
-    r = q
-=======
     r = model.generate_content(q)
     r = r.text
->>>>>>> eec0a5a (1)
     return(render_template("gemini_reply.html", r=r))
 
 if __name__ == "__main__":
