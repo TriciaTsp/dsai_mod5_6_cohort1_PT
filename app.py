@@ -1,6 +1,10 @@
 #gemini
 
 from flask import Flask, request, render_template
+import google.generativeai as genai
+
+genai.configure(api_key="AIzaSyCNSkl3lLkGbiiwQNsGZD5NXBogO4Sl3g8")
+model = genai.GenerativeModel("gemini-2.0-flash")
 
 app = Flask(__name__)
 
@@ -16,7 +20,12 @@ def gemini():
 def gemini_reply():
     q = request.form.get("q")
     print(q)
+<<<<<<< HEAD
     r = q
+=======
+    r = model.generate_content(q)
+    r = r.text
+>>>>>>> eec0a5a (1)
     return(render_template("gemini_reply.html", r=r))
 
 if __name__ == "__main__":
