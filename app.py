@@ -3,12 +3,13 @@
 from flask import Flask, request, render_template
 import google.generativeai as genai
 from dotenv import load_dotenv
+import markdown2
 import os
 
 # Load environment variables from .env file
 load_dotenv()
 
-api_key = os.getenv('gemini_key')
+api_key = os.getenv('GEMINI_KEY')
 genai.configure(api_key=api_key)
 model = genai.GenerativeModel("gemini-2.0-flash")
 
@@ -27,7 +28,7 @@ def gemini_reply():
     q = request.form.get("q")
     print(q)
     r = model.generate_content(q)
-    r = r.text
+    r = markdown2.markdown(r.text)
     return(render_template("gemini_reply.html", r=r))
 
 if __name__ == "__main__":
