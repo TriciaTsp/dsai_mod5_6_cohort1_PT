@@ -7,8 +7,13 @@
 <body>
     <div class="container">
         <h2>Web Application</h2>
-        <form action="/gemini" method="POST">
-            <input type="submit" value="Chatbot by Gemini">
+        <form action="/main" method="POST">
+            <p>Please enter your user name: </p>
+            <input type="text" name="q">
+            <input type="submit" value="Enter">
+        </form>
+        <form action="/main" method="GET">
+            <input type="submit" value="Skip to Main">
         </form>
     </div>
 </body>

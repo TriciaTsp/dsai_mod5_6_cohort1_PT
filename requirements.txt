@@ -3,3 +3,4 @@ gunicorn
 google-generativeai
 dotenv
 markdown2
+pysqlite3

@@ -7,11 +7,15 @@
 <body>
     <div class="container">
         <h2>Chatbot by Gemini</h2>
+        <h3>Hello {{ usernames }}</h3>
 
         <form action="/gemini_reply" method="POST">
             <input type="text" name="q">
             <input type="submit" value="Enter">
         </form>
+        <form action="/" method="POST">
+             <input type="submit" value="Back to Index">
+        </form>        
     </div>
 </body>
 </html>
