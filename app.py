@@ -93,6 +93,10 @@ def delete_log():
     
     return(render_template("delete_log.html"))
 
+@app.route("/buy_ebook", methods=["GET","POST"])
+def buy_ebook():   
+    return(render_template("buy_ebook.html"))
+
 @app.route("/paynow", methods=["GET","POST"])
 def paynow():
     return(render_template("paynow.html"))
