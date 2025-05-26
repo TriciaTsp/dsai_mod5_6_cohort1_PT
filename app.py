@@ -1,11 +1,12 @@
 #gemini
 
-from flask import Flask, request, render_template
+from flask import Flask, request, render_template, jsonify, url_for
 import google.generativeai as genai
 from dotenv import load_dotenv
 import markdown2
 import os
 import sqlite3, datetime
+from web3 import Web3
 
 # Load environment variables from .env file
 load_dotenv()
@@ -100,6 +101,156 @@ def buy_ebook():
 @app.route("/paynow", methods=["GET","POST"])
 def paynow():
     return(render_template("paynow.html"))
+
+@app.route("/prediction", methods=["GET","POST"])
+def prediction():
+    return(render_template("prediction.html"))
+
+@app.route("/dbs_price", methods=["POST"])
+def dbs_price():
+    sgd = float(request.form.get("q"))
+    dbs = -50.60094302*sgd + 90.22858515
+    return(render_template("prediction_ans.html", r=dbs))
+
+@app.route("/pay_ebook", methods=["GET","POST"])
+def pay_ebook():
+
+    contractAddress = Web3.to_checksum_address("0xac6fcf7ad53dcfa8a9b3c4b46071c90cd679ff0f"); #to address
+    
+    contractABI = [
+        {
+            "inputs": [],
+            "stateMutability": "nonpayable",
+            "type": "constructor"
+        },
+        {
+            "inputs": [
+                {
+                    "internalType": "address",
+                    "name": "payer1",
+                    "type": "address"
+                },
+                {
+                    "internalType": "address",
+                    "name": "payee1",
+                    "type": "address"
+                },
+                {
+                    "internalType": "uint256",
+                    "name": "amount1",
+                    "type": "uint256"
+                }
+            ],
+            "name": "weixin",
+            "outputs": [],
+            "stateMutability": "nonpayable",
+            "type": "function"
+        },
+        {
+            "inputs": [],
+            "name": "transaction",
+            "outputs": [
+                {
+                    "internalType": "address",
+                    "name": "",
+                    "type": "address"
+                },
+                {
+                    "internalType": "address",
+                    "name": "",
+                    "type": "address"
+                },
+                {
+                    "internalType": "uint256",
+                    "name": "",
+                    "type": "uint256"
+                }
+            ],
+            "stateMutability": "view",
+            "type": "function"
+        }
+    ];
+    
+    w3 = Web3(Web3.HTTPProvider('https://sepolia.infura.io/v3/927f5571e9ef49ff94e3de129e9f9766'))
+    payee = "0xA32ba8347C6ec737D729aF1dFB6854Da3161aF0c";
+
+    if w3.is_connected():
+        print("Connected to Sepolia!")
+        contract = w3.eth.contract(address=contractAddress, abi=contractABI)
+        payer_address = request.form.get('payer')
+        amount = convertAmt(w3)
+        print("payer: " + str(payer_address))
+        print(amount)
+        payer_address = w3.to_checksum_address(payer_address)
+        receipt = send_contract_tx(w3, contract.functions.weixin(payer_address, payee, amount), payer_address, private_key)
+        print("Tx mined at:", receipt.transactionHash.hex())
+
+        return(render_template("download.html"))
+    else:
+        print("Failed to connect.")
+        return(render_template("index.html"))
+
+
+def convertAmt(w3):
+        sgdPrice = 0.5;
+        ethToSgd = 4000; # example: 1 ETH = 4000 SGD
+        ethAmount = sgdPrice / ethToSgd;
+
+        print("ethAmount: "+ str(ethAmount))
+        amountInWei = w3.to_wei(ethAmount, 'ether');
+        print("weiAmount: "+ str(amountInWei))
+        return amountInWei;
+
+def send_contract_tx(w3, contract_function, sender_address, private_key):
+    nonce = w3.eth.get_transaction_count(sender_address)
+    gas_estimate = contract_function.estimate_gas({'from': sender_address})
+    gas_price = w3.eth.gas_price
+
+    txn = contract_function.build_transaction({
+        'from': sender_address,
+        'nonce': nonce,
+        'gas': gas_estimate,
+        'gasPrice': gas_price,
+    })
+
+    signed_txn = w3.eth.account.sign_transaction(txn, private_key=private_key)
+    tx_hash = w3.eth.send_raw_transaction(signed_txn.rawTransaction)
+    receipt = w3.eth.wait_for_transaction_receipt(tx_hash)
+
+    return receipt
+
+@app.route('/verify_payment', methods=['POST'])
+def verify_payment():
+    w3 = Web3(Web3.HTTPProvider('https://sepolia.infura.io/v3/927f5571e9ef49ff94e3de129e9f9766'))
+    data = request.get_json()
+    tx_hash = data.get('txHash')
+    payer = data.get('payer')
+    contractAddress = w3.to_checksum_address(data.get('contractAddress'))
+
+    if not tx_hash or not payer:
+        return jsonify(success=False, error="Missing txHash or payer"), 400
+
+    try:
+        receipt = w3.eth.wait_for_transaction_receipt(tx_hash, timeout=120)
+    except Exception as e:
+        return jsonify(success=False, error="Transaction not found or timed out"), 400
+
+    # Check status success
+    if receipt.status != 1:
+        return jsonify(success=False, error="Transaction failed"), 400
+
+    #Simple example: Check transaction 'from' matches payer and to is your contract
+    tx = w3.eth.get_transaction(tx_hash)
+    if tx['from'].lower() != payer.lower() or tx['to'].lower() != contractAddress.lower():
+        return jsonify(success=False, error="Transaction details do not match"), 400
+    
+    # If all checks pass, return ebook URL
+    download_url = url_for('download_page')
+    return jsonify(success=True, ebook_url=download_url)
+
+@app.route('/download_page')
+def download_page():
+    return render_template('download_page.html')
 
 if __name__ == "__main__":
     app.run()

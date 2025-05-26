@@ -7,17 +7,18 @@
 <body>
     <div class="container">
         <h2>Buy Ebook</h2>
-        <input type="text" id="payer" placeholder="Payer address">
-        <input type="text" id="payee" placeholder="Payee address">
-        <input type="number" id="amount" placeholder="Enter amount to transfer">
-
-        <button class="btn" onclick="transfer()">Transfer</button>
-        <button class="btn" onclick="transaction()">Transaction</button>
-
-        <p id="view_payer"></p>
-        <p id="view_payee"></p>
-        <p id="view_amount"></p>
-
+        <h3>Price: $0.50 SGD (0.000125 Sepolia Eth)</h3>
+        <form action="/pay_ebook" method="POST">
+            <input type="text" id="payer" name='payer' placeholder="Payer address">
+            <input type="submit" value="Pay">
+        </form>        
+        <form action="/main" method="POST">
+             <input type="submit" value="Back to Main">
+        </form>        
+        <button class="btn" onclick="transfer()">Pay</button>
+        <div id="download" style="display:none;">
+            <a href="/download" target="_blank">Download eBook</a>
+        </div>
         <form action="/" method="POST">
              <input type="submit" value="Back to Index">
         </form>        
@@ -90,13 +91,65 @@
     async function transfer() {
         const accounts = await web3.eth.requestAccounts();
         const payer = document.getElementById('payer').value;
-        const payee = document.getElementById('payee').value;
-        const amount = document.getElementById('amount').value;
+        const payee = "0xA32ba8347C6ec737D729aF1dFB6854Da3161aF0c";
+        const amount = convertAmt();
         console.log(payer,payee,amount);
         
+        console.log("print wei again: " + amount);
         console.log("accounts[0] " + accounts[0]);
-        await contract.methods.weixin(payer, payee, amount).send({ from: accounts[0] });
-       // await contract.method.weixin(payer,payee,amount).send({from:accounts[0]});
+        if (typeof window.ethereum === "undefined") {
+            alert("MetaMask not detected. Please install it to continue.");
+            return;
+        }
+
+        try {
+            const tx = await contract.methods.weixin(payer, payee, amount).send({ from: accounts[0] });
+            console.log("Transaction sent:", tx);
+            
+            const response = await fetch('/verify_payment', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ txHash: tx.transactionHash, payer: payer, contractAddress: contractAddress})
+            });
+
+            const result = await response.json();
+            if (result.success) {
+                window.location.href = result.ebook_url;
+            } else {
+                alert("Payment verification failed. Please try again.");
+            }
+
+        } catch (error) {
+            console.error("Transaction failed:", error);
+            alert("Payment failed or cancelled.");
+        }
+    }
+
+    async function transfer2() {
+        const accounts = await web3.eth.requestAccounts();
+        const payer = document.getElementById('payer').value;
+        const payee = "0xA32ba8347C6ec737D729aF1dFB6854Da3161aF0c";
+        const amount = convertAmt();
+        console.log(payer,payee,amount);
+        
+        console.log("print wei again: " + amount);
+        console.log("accounts[0] " + accounts[0]);
+        if (typeof window.ethereum === "undefined") {
+            alert("MetaMask not detected. Please install it to continue.");
+            return;
+        }
+
+        try {
+            const tx = await contract.methods.weixin(payer, payee, amount).send({ from: accounts[0] });
+            console.log("Transaction sent:", tx);
+            
+            // Unlock the download link
+            document.getElementById("download").style.display = "block";
+            console.log("Transaction confirmed:");
+        } catch (error) {
+            console.error("Transaction failed:", error);
+            alert("Payment failed or cancelled.");
+        }
     }
 
     async function transaction() {
@@ -105,6 +158,18 @@
         document.getElementById('view_payer').innerText = "Payer: " + result[0];
         document.getElementById('view_payee').innerText = "Payee: " + result[1];
         document.getElementById('view_amount').innerText = "Amount: " + result[2];
+    }
+
+    function convertAmt() {
+        const sgdPrice = 0.5;
+        const ethToSgd = 4000; // example: 1 ETH = 4000 SGD
+        const ethAmount = sgdPrice / ethToSgd;
+
+        console.log("ethAmount: "+ ethAmount)
+        const amountInWei = web3.utils.toWei(ethAmount.toString(), 'ether');
+        console.log("weiAmount: "+ amountInWei)
+        console.log(typeof amountInWei); // should be "string"
+        return amountInWei;
     }
 </script>
 </body>

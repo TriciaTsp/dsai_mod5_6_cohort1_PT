@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta name ="viewport" content ="width=device-width,initial-scale=1.0">
+    <link rel="stylesheet" href="{{url_for('static',filename='styles.css')}}">
+</head>
+<body>
+    <div class="container">
+        <h3>Predicted DBS price: {{ r | round(2) }}</h3>
+        <form action="/main" method="post">        
+            <input type="submit" value="Main">
+        </form>
+    </div>
+</body>
+</html>
