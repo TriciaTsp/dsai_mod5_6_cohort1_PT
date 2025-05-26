@@ -279,6 +279,7 @@ def start_telegram():
 @app.route("/telegram",methods=["GET","POST"])
 def telegram():
     update = request.get_json()
+    print("in telegram function")
     if "message" in update and "text" in update["message"]:
         # Extract the chat ID and message text from the update
         chat_id = update["message"]["chat"]["id"]
