@@ -4,3 +4,4 @@ google-generativeai
 dotenv
 markdown2
 pysqlite3
+web3
