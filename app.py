@@ -7,6 +7,7 @@ import markdown2
 import os
 import sqlite3, datetime
 from web3 import Web3
+import requests
 
 # Load environment variables from .env file
 load_dotenv()
@@ -252,5 +253,52 @@ def verify_payment():
 def download_page():
     return render_template('download_page.html')
 
+@app.route("/start_telegram",methods=["GET","POST"])
+def start_telegram():
+    gemini_telegram_token = os.getenv('gemini_telegram_token')
+    
+    domain_url = os.getenv('WEBHOOK_URL')
+
+    # The following line is used to delete the existing webhook URL for the Telegram bot
+    delete_webhook_url = f"https://api.telegram.org/bot{gemini_telegram_token}/deleteWebhook"
+    requests.post(delete_webhook_url, json={"url": domain_url, "drop_pending_updates": True})
+    
+    # Set the webhook URL for the Telegram bot
+    set_webhook_url = f"https://api.telegram.org/bot{gemini_telegram_token}/setWebhook?url={domain_url}/telegram"
+    print(set_webhook_url)
+    webhook_response = requests.post(set_webhook_url, json={"url": domain_url, "drop_pending_updates": True})
+    print('webhook:', webhook_response)
+    if webhook_response.status_code == 200:
+        # set status message
+        status = "The telegram bot is running. Please check with the telegram bot. @gemini_tt_bot"
+    else:
+        status = "Failed to start the telegram bot. Please check the logs."
+    
+    return render_template("telegram.html", status=status)
+           
+@app.route("/telegram",methods=["GET","POST"])
+def telegram():
+    update = request.get_json()
+    if "message" in update and "text" in update["message"]:
+        # Extract the chat ID and message text from the update
+        chat_id = update["message"]["chat"]["id"]
+        text = update["message"]["text"]
+        if text == "/start":
+            r_text = "Welcome to the Gemini Telegram Bot! You can ask me any finance-related questions."
+        else:
+            # Process the message and generate a response
+            system_prompt = "You are a financial expert.  Answer ONLY questions related to finance, economics, investing, and financial markets. If the question is not related to finance, state that you cannot answer it."
+            prompt = f"{system_prompt}\n\nUser Query: {text}"
+            r = genmini_client.models.generate_content(
+                model=genmini_model,
+                contents=prompt
+            )
+            r_text = r.text
+        
+        # Send the response back to the user
+        send_message_url = f"https://api.telegram.org/bot{gemini_telegram_token}/sendMessage"
+        requests.post(send_message_url, data={"chat_id": chat_id, "text": r_text})
+    return('ok', 200)
+    
 if __name__ == "__main__":
     app.run()

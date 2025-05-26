@@ -5,3 +5,4 @@ dotenv
 markdown2
 pysqlite3
 web3
+requests
