@@ -279,6 +279,7 @@ def start_telegram():
 @app.route("/telegram",methods=["GET","POST"])
 def telegram():
     update = request.get_json()
+    gemini_telegram_token = os.getenv('gemini_telegram_token')
     print("in telegram function")
     if "message" in update and "text" in update["message"]:
         # Extract the chat ID and message text from the update
