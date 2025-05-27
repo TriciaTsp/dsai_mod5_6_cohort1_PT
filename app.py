@@ -290,10 +290,7 @@ def telegram():
             # Process the message and generate a response
             system_prompt = "You are a financial expert.  Answer ONLY questions related to finance, economics, investing, and financial markets. If the question is not related to finance, state that you cannot answer it."
             prompt = f"{system_prompt}\n\nUser Query: {text}"
-            r = genmini_client.models.generate_content(
-                model=genmini_model,
-                contents=prompt
-            )
+            r = model.generate_content(prompt)
             r_text = r.text
         
         # Send the response back to the user
